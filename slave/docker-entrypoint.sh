@@ -103,6 +103,9 @@ fi
 
 echo "Fixing permissions"
 chown -v jenkins:jenkins /var/jenkins_home/worker/
+chown -v jenkins:jenkins /var/run/docker.sock
+
+sudo usermod -aG docker jenkins
 
 if [ ! -e /var/jenkins_home/worker/.ssh/id_rsa.pub ]; then
   gosu jenkins ssh-keygen -q -N "" -f /var/jenkins_home/worker/.ssh/id_rsa

@@ -21,9 +21,17 @@ RUN apt-get update \
   || gpg --keyserver keyserver.pgp.com --recv-keys "$GPG_KEYS" \
  && gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
  && rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc \
- && chmod +x /usr/local/bin/gosu \
- && gosu nobody true
+ && chmod +x /usr/local/bin/gosu
 
+RUN apt-get update
+RUN apt-get install apt-transport-https ca-certificates curl software-properties-common -y
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+RUN apt-get update
+RUN apt-cache policy docker-ce
+RUN apt-get install docker-ce -y
+
+RUN usermod -aG docker root
 RUN wget --no-check-certificate https://bitbucket.org/ariya/phantomjs/downloads/$PHANTOMJS_VERSION.tar.bz2 \
  && echo "$MD5PHANTOMJS  ${PHANTOMJS_VERSION}.tar.bz2" | md5sum -c - \
  && tar xvf ${PHANTOMJS_VERSION}.tar.bz2 \
