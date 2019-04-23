@@ -13,11 +13,12 @@ services:
     image: softuni/jenkins-worker
     environment:
       JAVA_OPTS: "-Xmx2048m"
-      JENKINS_MASTER: "http://master:8080"
+      JENKINS_MASTER: "https://build.softuni.org"
       JENKINS_NAME: "worker"
-      JENKINS_USER: "jenkins"
-      JENKINS_PASS: "jenkins"
+      JENKINS_USER: "Worker"
+      JENKINS_PASS: "qweqwe"
       JENKINS_RETRY: "10"
+      JENKINS_DISABLE_SSL_VERIFICATION: "true"
     volumes:
       - /tmp/jenkins-worker:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
