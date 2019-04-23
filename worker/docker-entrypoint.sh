@@ -101,6 +101,10 @@ if [ ! -z "$JENKINS_OPTS" ]; then
 fi
 
 
+if [ ! -z "$JENKINS_SECRET" ]; then
+  PARAMS="$PARAMS $JENKINS_SECRET"
+fi
+
 echo "Fixing permissions"
 chown -v jenkins:jenkins /var/jenkins_home/worker/
 chown -v jenkins:jenkins /var/run/docker.sock
@@ -116,11 +120,11 @@ if [ ! -e /var/jenkins_home/worker/.ssh/id_rsa.pub ]; then
 fi
 
 if [ "$1" = "java" ]; then
-  exec gosu jenkins java $JAVA_OPTS -jar /bin/swarm-client.jar -fsroot /var/jenkins_home/worker/ -labels "$JENKINS_LABELS" $PARAMS
+  exec gosu jenkins java $JAVA_OPTS -jar /bin/swarm-client.jar -fsroot /var/jenkins_home/worker/ -labels -noCertificateCheck "$JENKINS_LABELS" $PARAMS 
 fi
 
 if [[ "$1" == "-"* ]]; then
-  exec gosu jenkins java $JAVA_OPTS -jar /bin/swarm-client.jar -fsroot /var/jenkins_home/worker/ -labels "$JENKINS_LABELS" $PARAMS "$@"
+  exec gosu jenkins java $JAVA_OPTS -jar /bin/swarm-client.jar -fsroot /var/jenkins_home/worker/ -labels -noCertificateCheck "$JENKINS_LABELS" $PARAMS "$@"
 fi
 
 exec "$@"
