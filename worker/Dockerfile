@@ -1,57 +1,39 @@
-FROM openjdk:8
+ARG version=4.0.1-1
+FROM jenkins/slave:$version
 
-ENV GOSU_VERSION=1.10 \
-    SWARM_VERSION=3.14 \
-    MD5=0606d6e38ec8b2cc9b9d6e7b064c79ff \
-    PHANTOMJS_VERSION=phantomjs-2.1.1-linux-x86_64 \
-    MD5PHANTOMJS=1c947d57fce2f21ce0b43fe2ed7cd361  \
-    CASPERJS_VERSION=1.1.4-2
+ARG version
+LABEL Description="This is a base image, which allows connecting Jenkins agents via JNLP protocols" Vendor="Jenkins project" Version="$version"
 
-# grab gosu for easy step-down from root
-RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates wget bzip2 python \
- && rm -rf /var/lib/apt/lists/* \
- && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
- && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
- && export GNUPGHOME="$(mktemp -d)" \
- && GPG_KEYS=B42F6819007F00F88E364FD4036A9C25BF357DD4 \
- && gpg --keyserver hkp://:p80.pool.sks-keyservers.net:80 --recv-keys "$GPG_KEYS" \
-  || gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$GPG_KEYS" \
-  || gpg --keyserver pgp.mit.edu --recv-keys "$GPG_KEYS" \
-  || gpg --keyserver keyserver.pgp.com --recv-keys "$GPG_KEYS" \
- && gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
- && rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc \
- && chmod +x /usr/local/bin/gosu
+USER root
+ARG user=jenkins
+
+RUN apt update
+RUN apt upgrade -y
 
 RUN apt-get update
-RUN apt-get install apt-transport-https ca-certificates curl software-properties-common -y
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+RUN apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg2 \
+    software-properties-common
+
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+
+RUN add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/debian \
+   $(lsb_release -cs) \
+   stable"
+
 RUN apt-get update
-RUN apt-cache policy docker-ce
-RUN apt-get install docker-ce -y
+RUN apt-get install -y \
+ docker-ce docker-ce-cli containerd.io
 
 RUN usermod -aG docker root
-RUN wget --no-check-certificate https://bitbucket.org/ariya/phantomjs/downloads/$PHANTOMJS_VERSION.tar.bz2 \
- && echo "$MD5PHANTOMJS  ${PHANTOMJS_VERSION}.tar.bz2" | md5sum -c - \
- && tar xvf ${PHANTOMJS_VERSION}.tar.bz2 \
- && mv $PHANTOMJS_VERSION/bin/phantomjs /usr/local/bin/ \
- && rm -rf phantom*
 
-RUN git clone  -b ${CASPERJS_VERSION}  git://github.com/casperjs/casperjs.git \
- && mv casperjs /opt/ \
- && ln -sf /opt/casperjs/bin/casperjs /usr/local/bin/casperjs
+COPY jenkins-agent /usr/local/bin/jenkins-agent
+RUN chmod +x /usr/local/bin/jenkins-agent &&\
+    ln -s /usr/local/bin/jenkins-agent /usr/local/bin/jenkins-slave
+USER ${user}
 
-# grab swarm-client.jar
-RUN mkdir -p /var/jenkins_home \
- && useradd -d /var/jenkins_home/worker -u 1000 -m -s /bin/bash jenkins \
- && curl -o /bin/swarm-client.jar -SL https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/$SWARM_VERSION/swarm-client-$SWARM_VERSION.jar \
- && echo "$MD5  /bin/swarm-client.jar" | md5sum -c -
-
-COPY docker-entrypoint.sh /
-
-VOLUME /var/jenkins_home/worker
-WORKDIR /var/jenkins_home/worker
-
-ENTRYPOINT ["sh", "/docker-entrypoint.sh"]
-CMD ["java", "-jar", "/bin/swarm-client.jar"]
+ENTRYPOINT ["jenkins-agent"]
